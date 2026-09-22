@@ -1,109 +1,116 @@
-import java.util.*;
-
 class Solution {
     public int catMouseGame(int[][] graph) {
-        int n = graph.length;
-        int[][][] color = new int[n][n][2];
-        int[][][] degree = new int[n][n][2];
-        
-        for (int mouse = 0; mouse < n; mouse++) {
-            for (int cat = 0; cat < n; cat++) {
-                degree[mouse][cat][0] = graph[mouse].length;
+         final int n = graph.length;
+        final int totalStates = n * n * 3;
 
-                int catMoves = 0;
-                for (int next : graph[cat]) {
-                    if (next != 0) catMoves++;
-                }
-                degree[mouse][cat][1] = catMoves;
-            }
-        }
+        int[] results = new int[totalStates];
+        int[] degrees = new int[totalStates];
+        int[] queue = new int[totalStates];
+        for (int m = 0; m < n; m++) {
+            int mouseBase = m * n * 3;
 
-        Queue<int[]> queue = new LinkedList<>();
+            for (int c = 1; c < n; c++) {
+                int base = mouseBase + c * 3;
+                degrees[base + 1] = graph[m].length;
+                int count = 0;
+                int[] catNeighbors = graph[c];
 
-        for (int cat = 1; cat < n; cat++) {
-            color[0][cat][0] = 1;
-            color[0][cat][1] = 1;
-
-            queue.offer(new int[]{0, cat, 0, 1});
-            queue.offer(new int[]{0, cat, 1, 1});
-        }
-
-        for (int pos = 1; pos < n; pos++) {
-            color[pos][pos][0] = 2;
-            color[pos][pos][1] = 2;
-
-            queue.offer(new int[]{pos, pos, 0, 2});
-            queue.offer(new int[]{pos, pos, 1, 2});
-        }
-
-        while (!queue.isEmpty()) {
-            int[] state = queue.poll();
-
-            int mouse = state[0];
-            int cat = state[1];
-            int turn = state[2];
-            int result = state[3];
-
-            if (turn == 0) {
-                for (int prevCat : graph[cat]) {
-                    if (prevCat == 0) continue;
-
-                    process(
-                        mouse, prevCat, 1,
-                        mouse, cat, result,
-                        color, degree, queue
-                    );
-                }
-            } else {
-                for (int prevMouse : graph[mouse]) {
-                    process(
-                        prevMouse, cat, 0,
-                        mouse, cat, result,
-                        color, degree, queue
-                    );
-                }
-            }
-        }
-
-        return color[1][2][0];
-    }
-
-    private void process(
-        int prevMouse, int prevCat, int prevTurn,
-        int mouse, int cat, int result,
-        int[][][] color,
-        int[][][] degree,
-        Queue<int[]> queue
-    ) {
-        if (color[prevMouse][prevCat][prevTurn] != 0) {
-            return;
-        }
-
-        if ((prevTurn == 0 && result == 1) ||
-            (prevTurn == 1 && result == 2)) {
-
-            color[prevMouse][prevCat][prevTurn] = result;
-
-            queue.offer(
-                new int[]{prevMouse, prevCat, prevTurn, result}
-            );
-        } else {
-            degree[prevMouse][prevCat][prevTurn]--;
-
-            if (degree[prevMouse][prevCat][prevTurn] == 0) {
-                int loseResult = (prevTurn == 0) ? 2 : 1;
-
-                color[prevMouse][prevCat][prevTurn] = loseResult;
-
-                queue.offer(
-                    new int[]{
-                        prevMouse,
-                        prevCat,
-                        prevTurn,
-                        loseResult
+                for (int i = 0; i < catNeighbors.length; i++) {
+                    if (catNeighbors[i] != 0) {
+                        count++;
                     }
-                );
+                }
+
+                degrees[base + 2] = count;
             }
         }
+
+        int head = 0;
+        int tail = 0;
+        for (int c = 1; c < n; c++) {
+            int state1 = c * 3 + 1;
+            results[state1] = 1;
+            queue[tail++] = state1;
+
+            int state2 = c * 3 + 2;
+            results[state2] = 1;
+            queue[tail++] = state2;
+        }
+        for (int m = 1; m < n; m++) {
+            int state1 = (m * n + m) * 3 + 1;
+            results[state1] = 2;
+            queue[tail++] = state1;
+
+            int state2 = (m * n + m) * 3 + 2;
+            results[state2] = 2;
+            queue[tail++] = state2;
+        }
+
+        while (head < tail) {
+            int stateId = queue[head++];
+            int t = stateId % 3;
+            int position = stateId / 3;
+            int c = position % n;
+            int m = position / n;
+
+            int result = results[stateId];
+
+            if (t == 1) {
+                int[] neighbors = graph[c];
+
+                for (int i = 0; i < neighbors.length; i++) {
+                    int prevC = neighbors[i];
+
+                    if (prevC == 0) {
+                        continue;
+                    }
+
+                    int prevState = (m * n + prevC) * 3 + 2;
+
+                    if (results[prevState] != 0) {
+                        continue;
+                    }
+
+                    if (result == 2) {
+                        results[prevState] = 2;
+                        queue[tail++] = prevState;
+                    } else {
+                        int remaining = --degrees[prevState];
+
+                        if (remaining == 0) {
+                            results[prevState] = 1;
+                            queue[tail++] = prevState;
+                        }
+                    }
+                }
+
+            } else {
+                int[] neighbors = graph[m];
+
+                for (int i = 0; i < neighbors.length; i++) {
+                    int prevM = neighbors[i];
+
+                    int prevState = (prevM * n + c) * 3 + 1;
+
+                    if (results[prevState] != 0) {
+                        continue;
+                    }
+
+                    if (result == 1) {
+                        results[prevState] = 1;
+                        queue[tail++] = prevState;
+                    } else {
+                        int remaining = --degrees[prevState];
+
+                        if (remaining == 0) {
+            
+                            results[prevState] = 2;
+                            queue[tail++] = prevState;
+                        }
+                    }
+                }
+            }
+        }
+        return results[(1 * n + 2) * 3 + 1];
     }
 }
