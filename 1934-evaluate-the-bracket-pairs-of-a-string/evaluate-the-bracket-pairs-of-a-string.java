@@ -1,21 +1,22 @@
-class Solution 
-{
-    public String evaluate(String s, List<List<String>> K)
-    {
-        Map<String, String> d = new HashMap<>();
-        for (var k : K)
-            d.put(k.get(0), k.get(1));
-        StringBuilder str = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) 
-        {
-            if (s.charAt(i) == '(') 
-            {
-                int j = s.indexOf(")", i + 1);
-                str.append(d.getOrDefault(s.substring(i + 1, j), "?"));
-                i = j;
-            } else
-                str.append(s.charAt(i));
+class Solution {
+    public String evaluate(String s, List<List<String>> knowledge) {
+        Map<String, String> knowledgeMap = new HashMap<>(knowledge.size());
+        for (List<String> pair : knowledge) {
+            knowledgeMap.put(pair.get(0), pair.get(1));
         }
-        return str.toString();
+      
+        StringBuilder result = new StringBuilder();
+      
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == '(') {
+                int closingBracketIndex = s.indexOf(')', i + 1);
+                String key = s.substring(i + 1, closingBracketIndex);
+                result.append(knowledgeMap.getOrDefault(key, "?"));
+                i = closingBracketIndex;
+            } else {
+                result.append(s.charAt(i));
+            }
+        }
+        return result.toString();
     }
 }
